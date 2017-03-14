@@ -1,7 +1,8 @@
 import quandl
 import pandas as pd
-import json, datetime, os
-import sys
+import json, datetime, os, re
+import zipline.api
+import sys, urllib, csv
 import numpy as np
 
 
@@ -15,44 +16,83 @@ def getQuandlAPIKey():
 		return config['API_key']
 
 
-def getStockDatasetsFromQuandl(stocklist_file):
+# def makeURL(ticker, options):
+# 	return 'http://download.finance.yahoo.com/d/quotes.csv?s=' + ticker + '&f=' + options
+
+
+# def getStockDatasetsFromYahooFinance(tickers_list):
+# 	options = 'ohlcv'
+# 	for ticker in tickers_list:
+# 		requestURL = makeURL(ticker, options)
+# 		urllib.request.urlretrieve(requestURL, 'data/stocks/' + ticker + '.csv')
+
+
+def convertToMonthYearString(datetime_object):
 	"""
-	gets the historical stock price data for each stock in the file list and creates data files in data directory
-	:param stocklist_file: location of file containing list of stock tickers
+	convert datetime object to mth-year string
+	:rtype: string
 	"""
-	quandl.ApiConfig.api_key = getQuandlAPIKey()
-
-	with open(stocklist_file, 'r') as infile:
-		for line in infile:
-			for ticker in line.split(',')[1:]:
-				ticker = ticker.rstrip('\n')
-				if not os.path.exists('data/stocks/' + ticker + '.csv'):
-					data = quandl.get('WIKI/' + ticker)
-					data.to_csv('data/stocks/' + ticker + '.csv')
+	return datetime.datetime.strftime(datetime_object, '%m-%Y')
 
 
-def setup_dataframe():
-	start_date = datetime.datetime.strptime('02/20/2007', '%m/%d/%Y')
-	dataframe = pd.DataFrame()
-	with open('data/date_reference.txt', 'r') as dateref, open('data/dow_change_days_list.txt', 'r') as dowfile, open(
-		    'data/10year_dow_components.csv', 'w') as outfile:
-		dowfile_lines = dowfile.readlines()
-		counter = 0
-		base_date = datetime.datetime.strptime(dowfile_lines[counter].split(',')[0], '%m/%d/%Y')
-		next_date = datetime.datetime.strptime(dowfile_lines[counter + 1].split(',')[0], '%m/%d/%Y')
+def cleanTickers(tickers):
+	clean_tickers = [re.search('([A-Z])\w+', ticker).group(0) for ticker in tickers]
+	return clean_tickers
 
-		for date_string in dateref:
-			date_string = date_string.rstrip("\n")
-			date = datetime.datetime.strptime(date_string, '%m/%d/%Y')
-			if date < next_date and date > base_date:
-				outfile.write(date_string + ',' + dowfile_lines[counter].split(',', 1)[1])
-			elif date == next_date:
-				outfile.write(date_string + ',' + dowfile_lines[counter + 1].split(',', 1)[1])
-				base_date = next_date
-				if (counter + 2) <= len(dowfile_lines) - 1:
-					counter = counter + 1
-					next_date = datetime.datetime.strptime(dowfile_lines[counter + 1].split(',')[0],
-											   '%m/%d/%Y')
-				else:
-					next_date = datetime.datetime.today()
-					counter = counter + 1
+
+def makeStockCSVFileFromXLSX(xlsx_file):
+	"""
+	read in XLSX file and make CSV file with formatted dates and tickers with 1 if ticker in month else 0
+	:rtype: None
+	"""
+	df = pd.read_excel(xlsx_file, index_col=False)
+
+	df.fillna('0', inplace=True)
+	df.replace(1.0, '1', inplace=True)
+	df.drop(df.index[[0, len(df.index) - 1]], inplace=True)
+
+	cols = list(df.columns)
+	cols[1:] = [convertToMonthYearString(cols[x]) for x in range(1, len(cols))]
+
+	df.columns = cols
+
+	tickers = list(df[df.columns[0]])
+	tickers = cleanTickers(tickers)
+	df[df.columns[0]] = tickers
+
+	df.to_csv('data/IBB_components.csv', index=False)
+
+
+def getComponentsPandasDataframe():
+	"""
+	read in the CSV file as dataframe and return it
+	:rtype: pandas dataframe
+	"""
+	df = pd.read_csv('data/IBB_components.csv', index_col=False)
+	return df
+
+
+def getDatasetsFromQuandl(tickers):
+	for ticker in tickers:
+		try:
+			data = quandl.get('YAHOO/' + ticker)
+			data.to_csv('data/stocks/' + ticker + '.csv')
+		except:
+			print(ticker)
+			continue
+
+
+def setupDataFiles(xlsx_file):
+	"""
+	create the CSV if doesn't exist and grab the historical data for all the stocks
+	in the CSV file and put it into the data/stocks directory
+
+	one stop function to set up all the data files
+	:rtype: None
+	"""
+	if not os.path.exists('data/IBB_components.csv'):
+		makeStockCSVFileFromXLSX(xlsx_file)
+
+	df = getComponentsPandasDataframe()
+	tickers = list(df[df.columns[0]])
+
