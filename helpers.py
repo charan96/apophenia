@@ -1,8 +1,7 @@
 import quandl
 import pandas as pd
 import json, datetime, os, re
-import zipline.api
-import sys, urllib, csv
+import matplotlib.pyplot as plt
 import numpy as np
 
 
@@ -73,13 +72,45 @@ def getComponentsPandasDataframe():
 
 
 def getDatasetsFromQuandl(tickers):
+	quandl.ApiConfig.api_key = getQuandlAPIKey()
+	not_found_tickers = []
 	for ticker in tickers:
-		try:
-			data = quandl.get('YAHOO/' + ticker)
-			data.to_csv('data/stocks/' + ticker + '.csv')
-		except:
-			print(ticker)
-			continue
+		# TODO: remove if statement
+		if not os.path.exists('data/stocks/' + ticker + '.csv'):
+			try:
+				data = quandl.get('YAHOO/' + ticker)
+				data.to_csv('data/stocks/' + ticker + '.csv')
+			except Exception as e:
+				not_found_tickers.append(ticker)
+				continue
+
+	return not_found_tickers
+
+
+# def makeHistogram(not_found_tickers):
+# 	full_df = getComponentsPandasDataframe()
+# 	all_tickers = list(full_df[full_df.columns[0]])
+#
+# 	dates = [list(full_df.columns)[x] for x in range(1, len(list(full_df.columns)))]
+# 	all_tickers_freq = [full_df[date].value_counts()[1] for date in dates]
+
+# Build dataframe without not found stock tickers
+# edited_df = getComponentsPandasDataframe()
+# for x in not_found_tickers:
+# 	edited_df = edited_df[edited_df['Ticker'] != x]
+#
+# found_ticker_freq = [edited_df[date].value_counts()[1] for date in dates]
+#
+# plt.bar(range(0, len(dates)), all_tickers_freq, color='b')
+# plt.bar(range(0, len(dates)), found_ticker_freq, color='r')
+# plt.legend()
+#
+# differences = [all_tickers_freq[x] - found_ticker_freq[x] for x in range(0, 127)]
+# avg = sum(differences) / 127
+# mini = min(differences)
+# maxi = max(differences)
+# print("Avg: " + str(avg) + "\nMin: " + str(mini) + "\nMax: " + str(maxi))
+# plt.show()
 
 
 def setupDataFiles(xlsx_file):
@@ -96,3 +127,50 @@ def setupDataFiles(xlsx_file):
 	df = getComponentsPandasDataframe()
 	tickers = list(df[df.columns[0]])
 
+	not_found_tickers = getDatasetsFromQuandl(tickers)
+
+
+# 	makeHistogram(not_found_tickers)
+
+
+def getFoundTickers():
+	found_tickers = [file.split('.')[0] for file in os.listdir('data/stocks/')]
+
+	return found_tickers
+
+
+def getStockReturn():
+	return 100
+
+
+def getPriceIncrease():
+	return 200
+
+
+def setupReturnsDataframe():
+	df = getComponentsPandasDataframe()
+	df.set_index('Ticker', inplace=True)
+	df = df.transpose()
+
+	data_dict = {}
+	found_tickers = getFoundTickers()
+
+	for index, row in df.iterrows():
+		for i, item in enumerate(row):
+			if (item == 1) and (df.columns[i] in found_tickers):
+				if index not in data_dict:
+					data_dict[index] = {}
+				data_dict[index][df.columns[i]] = [getStockReturn(), getPriceIncrease()]
+
+		if index in data_dict:
+			data_dict[index]['avg'] = [int(np.mean([x[0] for x in list(data_dict[index].values())])),
+							   int(np.mean([x[1] for x in list(data_dict[index].values())]))]
+		# print([x[0] for x in list(data_dict[index].values())])
+
+	dataframe = pd.DataFrame({'return': [data_dict[x]['avg'][0] for x in sorted(list(data_dict.keys()))]},
+					 index=sorted(list(data_dict.keys())))
+	print(data_dict)
+
+
+def buildSignals():
+	setupReturnsDataframe()
