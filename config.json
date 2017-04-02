@@ -1,0 +1,6 @@
+{
+  "CSV_FILE": "data/IBB_components.csv",
+  "API_key": "d9c2StRA1P6VRoQFAdL2",
+  "dates": "data/dates.txt",
+  "num_of_signals": 2
+}

@@ -5,25 +5,23 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
+def getFromConfig(key):
+	"""
+	read the config.json file and return value of the key
+	:param key: key for the JSON object
+	:return: the value of the key from config.json file
+	"""
+	with open('config.json', 'r') as infile:
+		config = json.load(infile)
+		return config[key]
+
+
 def getQuandlAPIKey():
 	"""
-	grabs the API Key of Quandl from the config.txt file
+	grabs the API Key of Quandl from the config.json file
 	:return: Quandl API key
 	"""
-	with open('config.txt', 'r') as infile:
-		config = json.load(infile)
-		return config['API_key']
-
-
-# def makeURL(ticker, options):
-# 	return 'http://download.finance.yahoo.com/d/quotes.csv?s=' + ticker + '&f=' + options
-
-
-# def getStockDatasetsFromYahooFinance(tickers_list):
-# 	options = 'ohlcv'
-# 	for ticker in tickers_list:
-# 		requestURL = makeURL(ticker, options)
-# 		urllib.request.urlretrieve(requestURL, 'data/stocks/' + ticker + '.csv')
+	return getFromConfig('API_key')
 
 
 def convertToMonthYearString(datetime_object):
@@ -35,8 +33,40 @@ def convertToMonthYearString(datetime_object):
 
 
 def cleanTickers(tickers):
+	"""
+	remove unnecessary characters and clean tickers from XLSX file
+	:param tickers: list of unclean tickers
+	:return: list of clean tickers
+	"""
 	clean_tickers = [re.search('([A-Z])\w+', ticker).group(0) for ticker in tickers]
 	return clean_tickers
+
+
+def getComponentsPandasDataframe():
+	"""
+	read in the CSV file as dataframe and return it after changing date format
+	:rtype: pandas dataframe
+	"""
+	df = pd.read_csv(getFromConfig('CSV_FILE'), index_col=False)
+	cols = list(df.columns)
+	updated_cols = ['Ticker', ]
+	for date in cols[1:]:
+		formatted_date = '-'.join([date.split('-')[1], date.split('-')[0]])
+		updated_cols.append(formatted_date)
+
+	df.columns = updated_cols
+
+	return df
+
+
+def getFoundTickers():
+	"""
+	get the list of all the tickers that were found by Quandl
+	:return: list of tickers that were found by Quandl
+	"""
+	found_tickers = [file.split('.')[0] for file in os.listdir('data/stocks/')]
+
+	return found_tickers
 
 
 def makeStockCSVFileFromXLSX(xlsx_file):
@@ -48,6 +78,7 @@ def makeStockCSVFileFromXLSX(xlsx_file):
 
 	df.fillna('0', inplace=True)
 	df.replace(1.0, '1', inplace=True)
+	df.replace(r'\s+', 0, regex=True, inplace=True)
 	df.drop(df.index[[0, len(df.index) - 1]], inplace=True)
 
 	cols = list(df.columns)
@@ -59,19 +90,17 @@ def makeStockCSVFileFromXLSX(xlsx_file):
 	tickers = cleanTickers(tickers)
 	df[df.columns[0]] = tickers
 
-	df.to_csv('data/IBB_components.csv', index=False)
-
-
-def getComponentsPandasDataframe():
-	"""
-	read in the CSV file as dataframe and return it
-	:rtype: pandas dataframe
-	"""
-	df = pd.read_csv('data/IBB_components.csv', index_col=False)
-	return df
+	df.to_csv(getFromConfig('CSV_FILE'), index=False)
 
 
 def getDatasetsFromQuandl(tickers):
+	"""
+	get the dataset for all tickers from Quandl and save the data into CSV files in data/stocks/ folder;
+	if ticker not found add to list of not_found_tickers
+
+	:param tickers: list of tickers
+	:return not_found_tickers: list of all the tickers that were not found by Quandl
+	"""
 	quandl.ApiConfig.api_key = getQuandlAPIKey()
 	not_found_tickers = []
 	for ticker in tickers:
@@ -87,32 +116,6 @@ def getDatasetsFromQuandl(tickers):
 	return not_found_tickers
 
 
-# def makeHistogram(not_found_tickers):
-# 	full_df = getComponentsPandasDataframe()
-# 	all_tickers = list(full_df[full_df.columns[0]])
-#
-# 	dates = [list(full_df.columns)[x] for x in range(1, len(list(full_df.columns)))]
-# 	all_tickers_freq = [full_df[date].value_counts()[1] for date in dates]
-
-# Build dataframe without not found stock tickers
-# edited_df = getComponentsPandasDataframe()
-# for x in not_found_tickers:
-# 	edited_df = edited_df[edited_df['Ticker'] != x]
-#
-# found_ticker_freq = [edited_df[date].value_counts()[1] for date in dates]
-#
-# plt.bar(range(0, len(dates)), all_tickers_freq, color='b')
-# plt.bar(range(0, len(dates)), found_ticker_freq, color='r')
-# plt.legend()
-#
-# differences = [all_tickers_freq[x] - found_ticker_freq[x] for x in range(0, 127)]
-# avg = sum(differences) / 127
-# mini = min(differences)
-# maxi = max(differences)
-# print("Avg: " + str(avg) + "\nMin: " + str(mini) + "\nMax: " + str(maxi))
-# plt.show()
-
-
 def setupDataFiles(xlsx_file):
 	"""
 	create the CSV if doesn't exist and grab the historical data for all the stocks
@@ -121,22 +124,13 @@ def setupDataFiles(xlsx_file):
 	one stop function to set up all the data files
 	:rtype: None
 	"""
-	if not os.path.exists('data/IBB_components.csv'):
+	if not os.path.exists(getFromConfig('CSV_FILE')):
 		makeStockCSVFileFromXLSX(xlsx_file)
 
 	df = getComponentsPandasDataframe()
 	tickers = list(df[df.columns[0]])
 
 	not_found_tickers = getDatasetsFromQuandl(tickers)
-
-
-# 	makeHistogram(not_found_tickers)
-
-
-def getFoundTickers():
-	found_tickers = [file.split('.')[0] for file in os.listdir('data/stocks/')]
-
-	return found_tickers
 
 
 def getStockReturn():
@@ -147,30 +141,112 @@ def getPriceIncrease():
 	return 200
 
 
-def setupReturnsDataframe():
+def expandDictionaryWithDates(data_dict):
+	"""
+	add all dates from dates.txt to fill data_dict and remove just months from data_dict
+	:param data_dict: data_dict dictionary
+	:return: updated data dictionary
+	"""
+	with open(getFromConfig('dates'), 'r') as datefile:
+		for date in datefile:
+			date = date.rstrip("\n")
+			year_month = '-'.join([date.split('-')[0], date.split('-')[1]])
+			if year_month in data_dict:
+				data_dict[date] = data_dict[year_month]
+			else:
+				print(year_month)
+
+	for date in list(data_dict.keys()):
+		if re.match('^[0-9]{4}\-[0-9]{2}$', date):
+			del data_dict[date]
+
+	return data_dict
+
+
+def prettyPrintDict(data_dict):
+	"""
+	print the data_dict in a nice viewable format
+	:param data_dict: the data_dict dictionary with all the values
+	"""
+	for key in sorted(data_dict.keys()):
+		print("data_dict[" + key + "] = " + str(data_dict[key]))
+
+
+# todo: under construction; can't get this to work
+def addAverageValueInDataDict(date, data_dict, num_cols):
+	# data_dict[date]['avg'] = [[int(np.mean([x[k] for x in list(data_dict[date].values())]))] for k in range(num_cols)]
+
+	# (data_dict[date]['avg']).append(int(np.mean([x[0] for x in list(data_dict[date].values())])))
+	# (data_dict[date]['avg']).append(int(np.mean([x[1] for x in list(data_dict[date].values())])))
+	# print(data_dict[date]['avg'])
+
+	data_dict[date]['avg'] = [int(np.mean([x[0] for x in list(data_dict[date].values())])),
+					  int(np.mean([x[1] for x in list(data_dict[date].values())]))]
+	return data_dict
+
+
+def setupDataDictionaryStructure(df, data_dict):
+	"""
+	set up the dictionary with the following structure:
+	data_dict =	{
+		   	    'year-month(1)': {'ticker1': [None, None, ... ], 'ticker2': [None, None, ... ], ... , 'tickern': [None, None, ... ]},
+		   	    'year-month(2)': {'ticker1': [None, None, ... ], 'ticker2': [None, None, ... ], ... , 'tickern': [None, None, ... ]},
+		   	    ...
+		   	    'year-month(n)': {'ticker1': [None, None, ... ], 'ticker2': [None, None, ... ], ... , 'tickern': [None, None, ... ]}
+			}
+
+	The None values are temporary values that will be replaced with signals in populateWithData
+
+	:param df: transpose pandas dataframe of the CSV i.e, row headers: dates and column headers: tickers
+	:param data_dict: empty data_dictionary
+	:return: data_dictionary with structure setup
+	"""
+	found_tickers = getFoundTickers()
+	num_of_signals = getFromConfig('num_of_signals')  # NOTE: Change value in config.json to change number of signals
+
+	for date, row in df.iterrows():
+		for i, item in enumerate(row):
+			if ((item == 1) or (item == '1')) and (df.columns[i] in found_tickers):
+				ticker = df.columns[i]
+				if date not in data_dict:
+					data_dict[date] = {}
+				data_dict[date][ticker] = [None] * num_of_signals
+
+	return data_dict
+
+
+def populateWithData(data_dict):
+	"""
+	replace the None values from data_dict with actual signals
+	:param data_dict: data_dictionary structure
+	:return: data_dict with all signals and avg element in it
+	"""
+	for date in data_dict.keys():
+		for ticker in data_dict[date]:
+			data_dict[date][ticker] = [getStockReturn(), getPriceIncrease()]
+
+		# todo: replace this line with addAverageValueInDataDict
+		data_dict[date]['avg'] = [int(np.mean([x[0] for x in list(data_dict[date].values())])),
+						  int(np.mean([x[1] for x in list(data_dict[date].values())]))]
+
+	return data_dict
+
+
+def buildSignalsDataframe():
+	"""
+	setup the dataframe populated with columns
+	"""
 	df = getComponentsPandasDataframe()
 	df.set_index('Ticker', inplace=True)
 	df = df.transpose()
 
 	data_dict = {}
-	found_tickers = getFoundTickers()
 
-	for index, row in df.iterrows():
-		for i, item in enumerate(row):
-			if (item == 1) and (df.columns[i] in found_tickers):
-				if index not in data_dict:
-					data_dict[index] = {}
-				data_dict[index][df.columns[i]] = [getStockReturn(), getPriceIncrease()]
-
-		if index in data_dict:
-			data_dict[index]['avg'] = [int(np.mean([x[0] for x in list(data_dict[index].values())])),
-							   int(np.mean([x[1] for x in list(data_dict[index].values())]))]
-		# print([x[0] for x in list(data_dict[index].values())])
+	data_dict = setupDataDictionaryStructure(df, data_dict)
+	data_dict = expandDictionaryWithDates(data_dict)
+	data_dict = populateWithData(data_dict)
 
 	dataframe = pd.DataFrame({'return': [data_dict[x]['avg'][0] for x in sorted(list(data_dict.keys()))]},
 					 index=sorted(list(data_dict.keys())))
+
 	print(data_dict)
-
-
-def buildSignals():
-	setupReturnsDataframe()
