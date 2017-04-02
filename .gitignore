@@ -1,6 +1,6 @@
 .idea/*
 *.pyc
 data/stocks/*
-config.txt
+config.json
 data/IBB_components.csv
 data/file.html
