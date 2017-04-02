@@ -133,11 +133,13 @@ def setupDataFiles(xlsx_file):
 	not_found_tickers = getDatasetsFromQuandl(tickers)
 
 
-def getStockReturn():
+def getStockReturn(data_dict):
+
 	return 100
 
 
-def getPriceIncrease():
+def getPriceIncrease(data_dict):
+
 	return 200
 
 
@@ -215,7 +217,7 @@ def setupDataDictionaryStructure(df, data_dict):
 	return data_dict
 
 
-def populateWithData(data_dict):
+def populateDataframeWithSignals(data_dict):
 	"""
 	replace the None values from data_dict with actual signals
 	:param data_dict: data_dictionary structure
@@ -223,9 +225,9 @@ def populateWithData(data_dict):
 	"""
 	for date in data_dict.keys():
 		for ticker in data_dict[date]:
-			data_dict[date][ticker] = [getStockReturn(), getPriceIncrease()]
+			data_dict[date][ticker] = [getStockReturn(data_dict), getPriceIncrease(data_dict)]
 
-		# todo: replace this line with addAverageValueInDataDict
+		# todo: replace this line with addAverageValueInDataDict after fixing it
 		data_dict[date]['avg'] = [int(np.mean([x[0] for x in list(data_dict[date].values())])),
 						  int(np.mean([x[1] for x in list(data_dict[date].values())]))]
 
@@ -233,9 +235,6 @@ def populateWithData(data_dict):
 
 
 def buildSignalsDataframe():
-	"""
-	setup the dataframe populated with columns
-	"""
 	df = getComponentsPandasDataframe()
 	df.set_index('Ticker', inplace=True)
 	df = df.transpose()
@@ -244,7 +243,7 @@ def buildSignalsDataframe():
 
 	data_dict = setupDataDictionaryStructure(df, data_dict)
 	data_dict = expandDictionaryWithDates(data_dict)
-	data_dict = populateWithData(data_dict)
+	data_dict = populateDataframeWithSignals(data_dict)
 
 	dataframe = pd.DataFrame({'return': [data_dict[x]['avg'][0] for x in sorted(list(data_dict.keys()))]},
 					 index=sorted(list(data_dict.keys())))
