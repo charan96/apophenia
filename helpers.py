@@ -1,8 +1,11 @@
 import quandl
 import pandas as pd
-import json, datetime, os, re
+import json, datetime, os, re, sys, pickle
 import matplotlib.pyplot as plt
 import numpy as np
+import copy
+
+missing_vals = []
 
 
 def getFromConfig(key):
@@ -116,6 +119,7 @@ def getDatasetsFromQuandl(tickers):
 	return not_found_tickers
 
 
+# NOTE: work on final line of the function
 def setupDataFiles(xlsx_file):
 	"""
 	create the CSV if doesn't exist and grab the historical data for all the stocks
@@ -133,20 +137,32 @@ def setupDataFiles(xlsx_file):
 	not_found_tickers = getDatasetsFromQuandl(tickers)
 
 
-def getStockReturn(data_dict):
+def getStockReturn(ticker, date):
+	df = pd.read_csv('data/stocks/' + ticker + '.csv', index_col=False)
+	df.set_index('Date', inplace=True)
 
-	return 100
+	try:
+		loc = df.index.get_loc(date)
+
+		previous_day_close = (df.iloc[loc - 1])['Close']
+		current_day_close = df.get_value(date, 'Close')
+		return_value = float((current_day_close - previous_day_close) / previous_day_close)
+
+		return return_value
+
+	except Exception:
+		missing_vals.append([ticker, date])
+		return 0
 
 
-def getPriceIncrease(data_dict):
-
+def getPriceIncrease(ticker, date):
 	return 200
 
 
 def expandDictionaryWithDates(data_dict):
 	"""
 	add all dates from dates.txt to fill data_dict and remove just months from data_dict
-	:param data_dict: data_dict dictionary
+	:param data_dict: data_dict dictionary structure
 	:return: updated data dictionary
 	"""
 	with open(getFromConfig('dates'), 'r') as datefile:
@@ -154,7 +170,7 @@ def expandDictionaryWithDates(data_dict):
 			date = date.rstrip("\n")
 			year_month = '-'.join([date.split('-')[0], date.split('-')[1]])
 			if year_month in data_dict:
-				data_dict[date] = data_dict[year_month]
+				data_dict[date] = copy.deepcopy(data_dict[year_month])
 			else:
 				print(year_month)
 
@@ -174,16 +190,34 @@ def prettyPrintDict(data_dict):
 		print("data_dict[" + key + "] = " + str(data_dict[key]))
 
 
-# todo: under construction; can't get this to work
-def addAverageValueInDataDict(date, data_dict, num_cols):
-	# data_dict[date]['avg'] = [[int(np.mean([x[k] for x in list(data_dict[date].values())]))] for k in range(num_cols)]
+def addAverageValueInDataDict(date, data_dict):
+	"""
+	data_dict =	{
+		   	    'date(1)': {'ticker1': [sig1, sig2, ... ], ... , 'avg': [avg-of-sig1-on-date1, avg-of-sig2-on-date1, ... ]},
+		   	    'date(2)': {'ticker1': [sig1, sig2, ... ], ... , 'avg': [avg-of-sig1-on-date2, avg-of-sig2-on-date2, ... ]},
+		   	    ...
+		   	    'date(n)': {'ticker1': [sig1, sig2, ... ], ... , 'avg': [avg-of-sig1-on-daten, avg-of-sig2-on-daten, ... ]}
+			}
+	:param date: date string
+	:return: data_dict with average signals of all stocks
+	"""
+	num_of_signals = getFromConfig('num_of_signals')
 
-	# (data_dict[date]['avg']).append(int(np.mean([x[0] for x in list(data_dict[date].values())])))
-	# (data_dict[date]['avg']).append(int(np.mean([x[1] for x in list(data_dict[date].values())])))
-	# print(data_dict[date]['avg'])
+	data_dict[date]['avg'] = [float(np.mean([x[k] for x in data_dict[date].values() if float(x[k]) != float(0)])) for
+					  k in range(num_of_signals)]
 
-	data_dict[date]['avg'] = [int(np.mean([x[0] for x in list(data_dict[date].values())])),
-					  int(np.mean([x[1] for x in list(data_dict[date].values())]))]
+	# NOTE: above line is code equivalent to the following code block
+	# signal_value_list = []
+	# avg_values = []
+	# for index in range(num_of_signals):
+	# 	for signal_value in data_dict[date].values():
+	# 		if signal_value[index] != float(0):
+	# 			signal_value_list.append(signal_value[index])
+	#
+	# 	avg_values.append(float(np.mean(signal_value_list)))
+	#
+	# data_dict[date]['avg'] = avg_values
+
 	return data_dict
 
 
@@ -217,27 +251,67 @@ def setupDataDictionaryStructure(df, data_dict):
 	return data_dict
 
 
+def addLegendToDataDict(date, data_dict):
+	"""
+	add legend with names of the signals
+	:return: updated data_dict
+	"""
+	signal_names = ['return']
+	data_dict[date]['legend'] = signal_names
+
+	return data_dict
+
+
 def populateDataframeWithSignals(data_dict):
 	"""
 	replace the None values from data_dict with actual signals
 	:param data_dict: data_dictionary structure
 	:return: data_dict with all signals and avg element in it
 	"""
-	for date in data_dict.keys():
+	for date in sorted(list(data_dict.keys())):
 		for ticker in data_dict[date]:
-			data_dict[date][ticker] = [getStockReturn(data_dict), getPriceIncrease(data_dict)]
+			data_dict[date][ticker] = [getStockReturn(ticker, date), getPriceIncrease(ticker, date)]
 
-		# todo: replace this line with addAverageValueInDataDict after fixing it
-		data_dict[date]['avg'] = [int(np.mean([x[0] for x in list(data_dict[date].values())])),
-						  int(np.mean([x[1] for x in list(data_dict[date].values())]))]
+		addAverageValueInDataDict(date, data_dict)
+		addLegendToDataDict(date, data_dict)
 
 	return data_dict
 
+
+def saveDataDict(data_dict):
+	with open('data/data_dict.pickle', 'wb') as phandle:
+		pickle.dump(data_dict, phandle, protocol=pickle.HIGHEST_PROTOCOL)
+
+	with open('data/data_dict.json', 'w') as jhandle:
+		json.dump(data_dict, jhandle)
+
+
+# NOTE: temporary functions, remove later
+# NOTE: ---------------------------------
+
+def printJSONDatadict():
+	with open('data/data_dict.json', 'r') as fhandle:
+		data_dict = json.load(fhandle)
+
+	prettyPrintDict(data_dict)
+
+
+def printPickleDatadict():
+	with open('data/data_dict.pickle', 'rb') as fhandle:
+		data_dict = pickle.load(fhandle)
+
+	prettyPrintDict(data_dict)
+
+
+# NOTE: ---------------------------------
+# NOTE: temporary functions, remove later
 
 def buildSignalsDataframe():
 	df = getComponentsPandasDataframe()
 	df.set_index('Ticker', inplace=True)
 	df = df.transpose()
+
+	# df.to_html('data/file.html')
 
 	data_dict = {}
 
@@ -245,7 +319,11 @@ def buildSignalsDataframe():
 	data_dict = expandDictionaryWithDates(data_dict)
 	data_dict = populateDataframeWithSignals(data_dict)
 
+	saveDataDict(data_dict)
+
 	dataframe = pd.DataFrame({'return': [data_dict[x]['avg'][0] for x in sorted(list(data_dict.keys()))]},
 					 index=sorted(list(data_dict.keys())))
 
-	print(data_dict)
+	prettyPrintDict(data_dict)
+
+	# print(dataframe)
