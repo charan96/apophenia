@@ -6,4 +6,4 @@ start = time.time()
 helpers.setupDataFiles('data/IBB_monthly.xlsx')
 helpers.buildSignalsDataframe()
 
-print(time.time() - start)
+print('Time: ' + str(time.time() - start))
