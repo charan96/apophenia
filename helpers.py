@@ -235,9 +235,12 @@ def buildSignalsList(ticker, date):
 	:return: list of signals
 	"""
 	norm_15_sma = signal_builders.buildNormalizedSimpleMovingAverage(ticker, date, 15)
-	norm_30_ema = signal_builders.buildExponentialMovingAverage(ticker, date, 30)
+	norm_30_ema = signal_builders.buildNormalizedExponentialMovingAverage(ticker, date, 30)
+	rsi = signal_builders.relativeStrengthIndex(ticker, date, 14)
+	cci = signal_builders.buildCommodityChannelIndex(ticker, date, 14)
+	# norm_macd = signal_builders.buildNormalizedMACD(ticker, date)
 
-	signals_list = [norm_15_sma, norm_30_ema, signal_builders.getStockReturn(ticker, date)]
+	signals_list = [norm_15_sma, norm_30_ema, rsi, cci]
 
 	return signals_list
 
