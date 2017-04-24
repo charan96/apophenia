@@ -16,7 +16,7 @@ def buildNormalizedSimpleMovingAverage(ticker, date, num_of_days):
 	"""
 	build simple moving average of num_of_days for ticker normalized to between 0-1 by dividing it by
 	closing price on date
-	:return: moving average of ticker (float 0-1)
+	:return: moving average of ticker (float)
 	"""
 	df = getPandasDataframe(ticker)
 
@@ -26,7 +26,7 @@ def buildNormalizedSimpleMovingAverage(ticker, date, num_of_days):
 		close_prices = [(df.iloc[loc - k])['Adjusted Close'] for k in range(num_of_days) if (loc - k) >= 0]
 		moving_avg = float(np.mean(close_prices))
 
-		normalized_moving_avg = float(moving_avg / df.get_value(date, 'Adjusted Close'))
+		normalized_moving_avg = float(moving_avg / df.get_value(date, 'Adjusted Close')) * 100
 
 		return normalized_moving_avg
 
@@ -38,7 +38,7 @@ def buildNormalizedExponentialMovingAverage(ticker, date, num_of_days):
 	"""
 	build exponential moving average of num_of_days for ticker normalized to between 0-1 by dividing it by
 	closing price on date
-	:return: normalized exponential moving average of ticker (float 0-1)
+	:return: normalized exponential moving average of ticker (float)
 	"""
 	df = getPandasDataframe(ticker)
 
@@ -49,7 +49,7 @@ def buildNormalizedExponentialMovingAverage(ticker, date, num_of_days):
 		close_prices = list(reversed(close_prices))
 
 		ema = pd.ewma(np.array(close_prices), num_of_days)
-		normalized_ema = ema[-1] / df.get_value(date, 'Adjusted Close')
+		normalized_ema = (ema[-1] / df.get_value(date, 'Adjusted Close')) * 100
 
 		return normalized_ema
 
@@ -143,8 +143,6 @@ def buildCommodityChannelIndex(ticker, date, num_of_days):
 		return cci
 
 	except Exception as e:
-		print(e)
 		return 0
-
 
 # buildCommodityChannelIndex('AGEN', '2004-11-11', 20)

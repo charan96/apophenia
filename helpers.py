@@ -252,6 +252,7 @@ def populateDataframeWithSignals(data_dict):
 	:return: data_dict with all signals and avg element in it
 	"""
 	for date in sorted(data_dict.keys()):
+		print(date)
 		for ticker in data_dict[date].keys():
 			data_dict[date][ticker] = buildSignalsList(ticker, date)
 
