@@ -59,7 +59,11 @@ def ml_predict(stocks_signals_list):
 	rf = RandomForestRegressor(n_jobs=-1)
 	rf.fit(trainx, trainy)
 
+	predictions = []
+
 	# format of stocks_signals_list:
 	# [stock_name, sma, ema, rsi, cci, return, sentiment, price_change]
 	for stock in stocks_signals_list:
-		print(stock, rf.predict(stock))
+		predictions.append([stock, rf.predict(stock)])
+
+	return predictions
