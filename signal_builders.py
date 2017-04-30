@@ -6,8 +6,12 @@ warnings.simplefilter(action="ignore", category=FutureWarning)
 
 
 def getPandasDataframe(ticker):
-	df = pd.read_csv('data/stocks/' + ticker + '.csv', index_col=False)
-	df.set_index('Date', inplace=True)
+	if ticker == 'IBB':
+		df = pd.read_csv('data/IBB.csv', index_col=False)
+		df.set_index('Date', inplace=True)
+	else:
+		df = pd.read_csv('data/stocks/' + ticker + '.csv', index_col=False)
+		df.set_index('Date', inplace=True)
 
 	return df
 
@@ -125,6 +129,10 @@ def getTypicalPrice(df, loc, k):
 
 
 def buildCommodityChannelIndex(ticker, date, num_of_days):
+	"""
+	build the commodity channel index
+	:return: cci or 0
+	"""
 	df = getPandasDataframe(ticker)
 
 	try:
@@ -142,7 +150,53 @@ def buildCommodityChannelIndex(ticker, date, num_of_days):
 
 		return cci
 
-	except Exception as e:
+	except Exception:
 		return 0
 
-# buildCommodityChannelIndex('AGEN', '2004-11-11', 20)
+
+def buildActiveReturn(ticker, date):
+	ticker_df = getPandasDataframe(ticker)
+	ibb_df = getPandasDataframe('IBB')
+
+	try:
+		ticker_loc = ticker_df.index.get_loc(date)
+		ibb_loc = ibb_df.index.get_loc(date)
+
+		if (ticker_loc - 250) >= 0:
+			month_ago_ticker_price = (ticker_df.iloc[ticker_loc - 20])['Adjusted Close']
+			month_ago_ibb_price = (ibb_df.iloc[ibb_loc - 20])['Adj Close']
+
+			year_ago_ticker_price = (ticker_df.iloc[ticker_loc - 250])['Adjusted Close']
+			year_ago_ibb_price = (ibb_df.iloc[ibb_loc - 250])['Adj Close']
+
+			ticker_index = month_ago_ticker_price / year_ago_ticker_price
+			benchmark_index = month_ago_ibb_price / year_ago_ibb_price
+
+			active_return = ticker_index - benchmark_index
+
+			return active_return
+		else:
+			return 0
+
+	except Exception:
+		return 0
+
+
+def buildPriceChange(ticker, date, num_of_days):
+	df = getPandasDataframe(ticker)
+
+	try:
+		loc = df.index.get_loc(date)
+
+		close_prices = [(df.iloc[loc + k])['Adjusted Close'] for k in range(1, num_of_days + 1) if
+				    (loc + k) <= df.shape[0]]
+
+		avg_close_prices = np.mean(close_prices)
+
+		avg_price_change = float(avg_close_prices - df.get_value(date, 'Adjusted Close'))
+
+		return avg_price_change
+
+	except Exception:
+		return 0
+

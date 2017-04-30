@@ -112,7 +112,7 @@ def getDatasetsFromQuandl(tickers):
 			try:
 				data = quandl.get('YAHOO/' + ticker)
 				data.to_csv('data/stocks/' + ticker + '.csv')
-			except Exception as e:
+			except Exception:
 				not_found_tickers.append(ticker)
 				continue
 
@@ -238,9 +238,11 @@ def buildSignalsList(ticker, date):
 	norm_30_ema = signal_builders.buildNormalizedExponentialMovingAverage(ticker, date, 30)
 	rsi = signal_builders.relativeStrengthIndex(ticker, date, 14)
 	cci = signal_builders.buildCommodityChannelIndex(ticker, date, 14)
+	act_return = signal_builders.buildActiveReturn(ticker, date)
+	price_change = signal_builders.buildPriceChange(ticker, date, 5)
 	# norm_macd = signal_builders.buildNormalizedMACD(ticker, date)
 
-	signals_list = [norm_15_sma, norm_30_ema, rsi, cci]
+	signals_list = [norm_15_sma, norm_30_ema, rsi, cci, act_return, price_change]
 
 	return signals_list
 
@@ -297,8 +299,6 @@ def buildSignalsDataframe():
 	df.set_index('Ticker', inplace=True)
 	df = df.transpose()
 
-	# df.to_html('data/file.html')
-
 	data_dict = {}
 
 	if not os.path.exists('data/data_dict.json'):
@@ -311,11 +311,31 @@ def buildSignalsDataframe():
 		with open('data/data_dict.json', 'r') as infile:
 			data_dict = json.load(infile)
 
-		data_dict = populateDataframeWithSignals(data_dict)
+	dataframe = pd.DataFrame({'sma': [data_dict[x]['avg'][0] for x in sorted(list(data_dict.keys()))],
+					  'ema': [data_dict[x]['avg'][1] for x in sorted(list(data_dict.keys()))],
+					  'rsi': [data_dict[x]['avg'][2] for x in sorted(list(data_dict.keys()))],
+					  'cci': [data_dict[x]['avg'][3] for x in sorted(list(data_dict.keys()))],
+					  'return': [data_dict[x]['avg'][4] for x in sorted(list(data_dict.keys()))],
+					  'price_change': [data_dict[x]['avg'][5] for x in sorted(list(data_dict.keys()))],},
+					 index=sorted(list(data_dict.keys())))
 
-	# dataframe = pd.DataFrame({'return': [data_dict[x]['avg'][0] for x in sorted(list(data_dict.keys()))]},
-	# 				 index=sorted(list(data_dict.keys())))
+	sentiment_scores = []
+	for date in sorted(list(data_dict.keys())):
+		filename = 'data/sent_scores/sent_' + date + '.json'
 
-	prettyPrintDict(data_dict)
+		if os.path.exists(filename):
+			with open(filename, 'r') as infile:
+				sent_dict = json.load(infile)
+				for item in sent_dict.keys():
+					sentiment_scores.append(float(sent_dict[item][1]))
+					break
+		else:
+			sentiment_scores.append(0.0)
 
-# print(dataframe)
+	dataframe['sentiment'] = sentiment_scores
+
+	dataframe = dataframe[['sma', 'ema', 'rsi', 'cci', 'return', 'sentiment', 'price_change']]
+	# dataframe = dataframe[['sma', 'ema', 'rsi', 'cci', 'return', 'price_change']]
+	dataframe = dataframe.fillna(0)
+
+	return dataframe
