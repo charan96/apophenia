@@ -1,12 +1,21 @@
 import helpers
 import maclearn
+import signal_builders
 import time
 import datetime
 
 start = time.time()
 print(datetime.datetime.now())
 
+
 # maclearn.testRandomForest(df)
-maclearn.ml_predict(stocks_signals_list)
+
+
+stockSignalsList = []
+
+for ticker in bundle:
+	stockSignalsList.append(helpers.createStockList(ticker, date))
+
+maclearn.ml_predict(stockSignalsList)
 
 print('Time: ' + str(time.time() - start))

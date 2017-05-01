@@ -2,6 +2,7 @@ from sklearn.ensemble import RandomForestRegressor
 import helpers
 import numpy as np
 import warnings
+from operator import itemgetter
 
 warnings.simplefilter(action="ignore", category=DeprecationWarning)
 
@@ -63,7 +64,10 @@ def ml_predict(stocks_signals_list):
 
 	# format of stocks_signals_list:
 	# [stock_name, sma, ema, rsi, cci, return, sentiment, price_change]
-	for stock in stocks_signals_list:
-		predictions.append([stock, rf.predict(stock)])
+	for stock_signals in stocks_signals_list:
+		predictions.append([stock_signals[0], rf.predict(stock_signals[1:-1])])
 
-	return predictions
+	predictions = reversed(sorted(predictions, key=itemgetter(1)))
+	stocks = [pred[0] for pred in predictions]
+
+	return stocks
