@@ -8,14 +8,8 @@ start = time.time()
 print(datetime.datetime.now())
 
 
-# maclearn.testRandomForest(df)
+maclearn.testRandomForest()
 
-
-stockSignalsList = []
-
-for ticker in bundle:
-	stockSignalsList.append(helpers.createStockList(ticker, date))
-
-maclearn.ml_predict(stockSignalsList)
+# maclearn.ml_predict(stockSignalsList)
 
 print('Time: ' + str(time.time() - start))

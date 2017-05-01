@@ -1,4 +1,6 @@
 from sklearn.ensemble import RandomForestRegressor
+from sklearn.ensemble import AdaBoostRegressor
+from sklearn.model_selection import train_test_split
 import helpers
 import numpy as np
 import warnings
@@ -7,7 +9,7 @@ from operator import itemgetter
 warnings.simplefilter(action="ignore", category=DeprecationWarning)
 
 
-def testRandomForest(df):
+def testRandomForest():
 	helpers.setupDataFiles('data/IBB_monthly.xlsx')
 	df = helpers.buildSignalsDataframe()
 
@@ -21,9 +23,11 @@ def testRandomForest(df):
 	trainy = np.delete(y, range(1800, x.shape[0]), axis=0)
 	testy = np.delete(y, range(1800), axis=0)
 	# trainx, testx, trainy, testy = train_test_split(x, y, test_size=0.3)
-	# trainx, validatex, trainy, validatey = train_test_split(trainx, trainy, test_size=0.3)
 
-	rf = RandomForestRegressor(n_jobs=-1)
+	feats = 0.7
+	samps = 60
+
+	rf = RandomForestRegressor(n_jobs=-1, n_estimators=500, max_features=feats, min_samples_leaf=samps)
 	rf.fit(trainx, trainy)
 
 	ctr = 0
@@ -40,7 +44,10 @@ def testRandomForest(df):
 	print('mean: ', np.mean(diff_list))
 	print('variance: ', np.var(diff_list))
 	print('std dev: ', np.std(diff_list))
+	print("\n")
+	print("max_features: " + str(feats) + "\tmin_samples_leaf: " + str(samps))
 	print('accuracy: ', ctr / testx.shape[0])
+	print('score: ', rf.score(testx, testy))
 
 
 def ml_predict(stocks_signals_list):
@@ -67,7 +74,7 @@ def ml_predict(stocks_signals_list):
 	for stock_signals in stocks_signals_list:
 		predictions.append([stock_signals[0], rf.predict(stock_signals[1:-1])])
 
-	predictions = reversed(sorted(predictions, key=itemgetter(1)))
-	stocks = [pred[0] for pred in predictions]
+	predictions = list(reversed(sorted(predictions, key=itemgetter(1))))
+	# stocks = [pred[0] for pred in predictions]
 
-	return stocks
+	return predictions

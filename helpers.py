@@ -274,15 +274,16 @@ def saveDataDict(data_dict):
 		json.dump(data_dict, jhandle)
 
 
-def createStockList(ticker, date):
+def createStockList(ticker, date, sentiment):
 	sma = signal_builders.buildNormalizedSimpleMovingAverage(ticker, date, 15)
 	ema = signal_builders.buildNormalizedExponentialMovingAverage(ticker, date, 30)
 	rsi = signal_builders.relativeStrengthIndex(ticker, date, 14)
 	cci = signal_builders.buildCommodityChannelIndex(ticker, date, 14)
 	act_return = signal_builders.buildActiveReturn(ticker, date)
+	sentiment = sentiment
 	price_change = signal_builders.buildPriceChange(ticker, date, 5)
 
-	return [ticker, sma, ema, rsi, cci, act_return, price_change]
+	return [ticker, sma, ema, rsi, cci, act_return, sentiment, price_change]
 
 
 # NOTE: temporary functions, remove later
