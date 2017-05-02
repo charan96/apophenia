@@ -75,6 +75,5 @@ def ml_predict(stocks_signals_list):
 		predictions.append([stock_signals[0], rf.predict(stock_signals[1:-1])])
 
 	predictions = list(reversed(sorted(predictions, key=itemgetter(1))))
-	# stocks = [pred[0] for pred in predictions]
 
 	return predictions

@@ -110,6 +110,9 @@ def relativeStrengthIndex(ticker, date, num_of_days):
 		rel_strength = np.mean(gains) / np.mean(losses)
 		rel_strength_index = 100 - (100 / (1 + rel_strength))
 
+		if np.isnan(rel_strength_index):
+			return 0
+
 		return rel_strength_index
 
 	except Exception:
@@ -181,7 +184,7 @@ def buildActiveReturn(ticker, date):
 	except Exception:
 		return 0
 
-
+# todo: change to percent increase
 def buildPriceChange(ticker, date, num_of_days):
 	df = getPandasDataframe(ticker)
 
