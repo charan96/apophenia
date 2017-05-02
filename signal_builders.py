@@ -32,12 +32,15 @@ def buildNormalizedSimpleMovingAverage(ticker, date, num_of_days):
 
 		normalized_moving_avg = float(moving_avg / df.get_value(date, 'Adjusted Close')) * 100
 
+		if np.isnan(rel_strength_index):
+			return 0
+
 		return normalized_moving_avg
 
 	except Exception:
 		return 0
 
-
+# change
 def buildNormalizedExponentialMovingAverage(ticker, date, num_of_days):
 	"""
 	build exponential moving average of num_of_days for ticker normalized to between 0-1 by dividing it by
@@ -54,6 +57,9 @@ def buildNormalizedExponentialMovingAverage(ticker, date, num_of_days):
 
 		ema = pd.ewma(np.array(close_prices), num_of_days)
 		normalized_ema = (ema[-1] / df.get_value(date, 'Adjusted Close')) * 100
+
+		if np.isnan(rel_strength_index):
+			return 0
 
 		return normalized_ema
 
@@ -151,6 +157,9 @@ def buildCommodityChannelIndex(ticker, date, num_of_days):
 
 		cci = (current_typical_price - tp_moving_avg) / (0.015 * mdtp)
 
+		if np.isnan(rel_strength_index):
+			return 0
+
 		return cci
 
 	except Exception:
@@ -177,6 +186,9 @@ def buildActiveReturn(ticker, date):
 
 			active_return = ticker_index - benchmark_index
 
+			if np.isnan(rel_strength_index):
+				return 0
+
 			return active_return
 		else:
 			return 0
@@ -197,6 +209,9 @@ def buildPriceChange(ticker, date, num_of_days):
 		avg_close_prices = np.mean(close_prices)
 
 		avg_price_change = float(avg_close_prices - df.get_value(date, 'Adjusted Close'))
+
+		if np.isnan(rel_strength_index):
+			return 0
 
 		return avg_price_change
 
