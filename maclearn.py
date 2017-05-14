@@ -66,24 +66,24 @@ def testRandomForest():
 
 
 def ml_predict(stocks_signals_list):
-	helpers.setupDataFiles('data/IBB_monthly.xlsx')
-	df = helpers.buildSignalsDataframe()
-
-	df = df.as_matrix()
-	x = np.delete(df, 6, axis=1)
-	y = np.delete(df, range(6), axis=1)
-
-	trainx = np.delete(x, range(int(x.shape[0] * 0.6) - 5, x.shape[0]), axis=0)
-	testx = np.delete(x, range(int(x.shape[0] * 0.6)), axis=0)
-
-	trainy = np.delete(y, range(int(x.shape[0] * 0.6) - 5, x.shape[0]), axis=0)
-	testy = np.delete(y, range(int(x.shape[0] * 0.6)), axis=0)
-
 	if not os.path.exists('data/randomForest.pickle'):
+		helpers.setupDataFiles('data/IBB_monthly.xlsx')
+		df = helpers.buildSignalsDataframe()
+
+		df = df.as_matrix()
+		x = np.delete(df, 6, axis=1)
+		y = np.delete(df, range(6), axis=1)
+
+		trainx = np.delete(x, range(int(x.shape[0] * 0.6) - 5, x.shape[0]), axis=0)
+		testx = np.delete(x, range(int(x.shape[0] * 0.6)), axis=0)
+
+		trainy = np.delete(y, range(int(x.shape[0] * 0.6) - 5, x.shape[0]), axis=0)
+		testy = np.delete(y, range(int(x.shape[0] * 0.6)), axis=0)
+
 		rf = RandomForestRegressor(n_jobs=-1, n_estimators=500, max_features=0.2, min_samples_leaf=90)
 		rf = rf.fit(trainx, trainy)
 	else:
-		with open('data/random_forest.pickle', 'rb') as phandle:
+		with open('data/randomForest.pickle', 'rb') as phandle:
 			rf = pickle.load(phandle)
 
 	predictions = []
