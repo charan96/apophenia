@@ -5,3 +5,4 @@ config.json
 data/data_dict.pickle
 data/IBB_components.csv
 data/file.html
+__pycache__/*

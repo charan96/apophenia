@@ -235,14 +235,13 @@ def buildSignalsList(ticker, date):
 	:return: list of signals
 	"""
 	norm_15_sma = signal_builders.buildNormalizedSimpleMovingAverage(ticker, date, 15)
-	norm_30_ema = signal_builders.buildNormalizedExponentialMovingAverage(ticker, date, 30)
+	norm_15_ema = signal_builders.buildNormalizedExponentialMovingAverage(ticker, date, 15)
 	rsi = signal_builders.relativeStrengthIndex(ticker, date, 14)
 	cci = signal_builders.buildCommodityChannelIndex(ticker, date, 14)
 	act_return = signal_builders.buildActiveReturn(ticker, date)
 	price_change = signal_builders.buildPriceChange(ticker, date, 5)
-	# norm_macd = signal_builders.buildNormalizedMACD(ticker, date)
 
-	signals_list = [norm_15_sma, norm_30_ema, rsi, cci, act_return, price_change]
+	signals_list = [norm_15_sma, norm_15_ema, rsi, cci, act_return, price_change]
 
 	return signals_list
 
@@ -276,7 +275,7 @@ def saveDataDict(data_dict):
 
 def createStockList(ticker, date, sentiment):
 	sma = signal_builders.buildNormalizedSimpleMovingAverage(ticker, date, 15)
-	ema = signal_builders.buildNormalizedExponentialMovingAverage(ticker, date, 30)
+	ema = signal_builders.buildNormalizedExponentialMovingAverage(ticker, date, 15)
 	rsi = signal_builders.relativeStrengthIndex(ticker, date, 14)
 	cci = signal_builders.buildCommodityChannelIndex(ticker, date, 14)
 	act_return = signal_builders.buildActiveReturn(ticker, date)
@@ -285,26 +284,6 @@ def createStockList(ticker, date, sentiment):
 
 	return [ticker, sma, ema, rsi, cci, act_return, sentiment, price_change]
 
-
-# NOTE: temporary functions, remove later
-# NOTE: ---------------------------------
-
-def printJSONDatadict():
-	with open('data/data_dict.json', 'r') as fhandle:
-		data_dict = json.load(fhandle)
-
-	prettyPrintDict(data_dict)
-
-
-def printPickleDatadict():
-	with open('data/data_dict.pickle', 'rb') as fhandle:
-		data_dict = pickle.load(fhandle)
-
-	prettyPrintDict(data_dict)
-
-
-# NOTE: ---------------------------------
-# NOTE: temporary functions, remove later
 
 def buildSignalsDataframe():
 	df = getComponentsPandasDataframe()
@@ -347,7 +326,6 @@ def buildSignalsDataframe():
 	dataframe['sentiment'] = sentiment_scores
 
 	dataframe = dataframe[['sma', 'ema', 'rsi', 'cci', 'return', 'sentiment', 'price_change']]
-	# dataframe = dataframe[['sma', 'ema', 'rsi', 'cci', 'return', 'price_change']]
 	dataframe = dataframe.fillna(0)
 
 	return dataframe

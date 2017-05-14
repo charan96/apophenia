@@ -32,13 +32,14 @@ def buildNormalizedSimpleMovingAverage(ticker, date, num_of_days):
 
 		normalized_moving_avg = float(moving_avg / df.get_value(date, 'Adjusted Close')) * 100
 
-		if np.isnan(rel_strength_index):
+		if np.isnan(normalized_moving_avg):
 			return 0
 
 		return normalized_moving_avg
 
 	except Exception:
 		return 0
+
 
 # change
 def buildNormalizedExponentialMovingAverage(ticker, date, num_of_days):
@@ -58,7 +59,7 @@ def buildNormalizedExponentialMovingAverage(ticker, date, num_of_days):
 		ema = pd.ewma(np.array(close_prices), num_of_days)
 		normalized_ema = (ema[-1] / df.get_value(date, 'Adjusted Close')) * 100
 
-		if np.isnan(rel_strength_index):
+		if np.isnan(normalized_ema):
 			return 0
 
 		return normalized_ema
@@ -157,7 +158,7 @@ def buildCommodityChannelIndex(ticker, date, num_of_days):
 
 		cci = (current_typical_price - tp_moving_avg) / (0.015 * mdtp)
 
-		if np.isnan(rel_strength_index):
+		if np.isnan(cci):
 			return 0
 
 		return cci
@@ -186,7 +187,7 @@ def buildActiveReturn(ticker, date):
 
 			active_return = ticker_index - benchmark_index
 
-			if np.isnan(rel_strength_index):
+			if np.isnan(active_return):
 				return 0
 
 			return active_return
@@ -196,7 +197,7 @@ def buildActiveReturn(ticker, date):
 	except Exception:
 		return 0
 
-# todo: change to percent increase
+
 def buildPriceChange(ticker, date, num_of_days):
 	df = getPandasDataframe(ticker)
 
@@ -208,13 +209,13 @@ def buildPriceChange(ticker, date, num_of_days):
 
 		avg_close_prices = np.mean(close_prices)
 
-		avg_price_change = float(avg_close_prices - df.get_value(date, 'Adjusted Close'))
+		avg_price_change = (float(avg_close_prices - df.get_value(date, 'Adjusted Close')) / df.get_value(date,
+																		  'Adjusted Close')) * 100
 
-		if np.isnan(rel_strength_index):
+		if np.isnan(avg_price_change):
 			return 0
 
 		return avg_price_change
 
 	except Exception:
 		return 0
-
